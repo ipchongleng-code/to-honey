@@ -20,9 +20,6 @@ img{max-width:100%}
 [hidden]{display:none!important}
 </style>
 <script src="config.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 /* Layout: theme-aware stage with a guide panel + a fixed light-mode phone prototype (full-bleed on phones) */
 :root{
@@ -1355,7 +1352,7 @@ function seedWeights(){
   offs.forEach((o, i) => { S.weights[addDays(t, i-6)] = Math.round((w + o)*10)/10; });
   S.weights[t] = w; S.demoWeights = true;
 }
-function ensureAccount(){ if(!S.account){ S.account = {u:'阿杰在减脂', h:hash('em' + '123456')}; } S.session = true; }
+function ensureAccount(){ S.session = true; }
 function ensureProfile(){
   ensureAccount();
   if(!S.profile){ S.profile = {gender:'male', age:26, heightCm:175, weightKg:72.5, activity:'moderate', goal:'fat_loss', bodyFatPct:null, dislikes:[], allergies:[], conditions:[]}; seedWeights(); }
@@ -1682,73 +1679,6 @@ document.addEventListener('dragstart', e => e.preventDefault());
 document.addEventListener('animationend', e => { if(e.animationName === 'rise') e.target.classList.remove('rise'); });
 
 /* =========================================================
-   SCREEN: login / register
-   ========================================================= */
-SCREENS.login = {
-  render(){
-    const reg = !S.account;
-    return `<div class="scroll">
-      <div class="login-hero rise">
-        <button class="login-mascot tap" data-act="poke" aria-label="小碗">${mascot(108)}</button>
-        <h1 class="wordmark">Eating<br><em>Manager</em></h1>
-        <p class="lead">碳循环、生酮、轻断食……<br>找到适合你的吃法，每天吃什么都安排好。</p>
-      </div>
-      <div class="seg dark rise" style="--i:1" id="modeSeg"><span class="seg-pill"></span>
-        <button class="seg-btn ${reg ? '' : 'on'}" data-act="mode" data-mode="login" type="button">登录</button>
-        <button class="seg-btn ${reg ? 'on' : ''}" data-act="mode" data-mode="register" type="button">注册</button>
-      </div>
-      <form class="form rise" style="--i:2" id="authForm" data-mode="${reg ? 'register' : 'login'}" novalidate>
-        <label class="field" id="fu"><input id="f-u" name="u" placeholder=" " autocomplete="username" maxlength="20" value="${reg ? '阿杰在减脂' : esc(S.account.u)}"><span>用户名</span></label>
-        <label class="field" id="fp"><input id="f-p" name="p" type="password" placeholder=" " autocomplete="current-password" maxlength="32" value="${reg ? '123456' : ''}"><span>密码（6–32 位）</span><button type="button" class="eye" data-act="eye" aria-label="显示密码">${ic('eye')}</button></label>
-        <div class="collapse ${reg ? 'open' : ''}" id="regOnly"><div style="display:flex; flex-direction:column; gap:12px">
-          <label class="field" id="fp2"><input id="f-p2" name="p2" type="password" placeholder=" " autocomplete="new-password" maxlength="32" value="${reg ? '123456' : ''}"><span>确认密码</span></label>
-          <button type="button" class="agree" data-act="agree" id="agree"><span class="ck sq" role="checkbox" aria-checked="false" id="agreeCk">${CK}</span><span>我已阅读并同意<b>《用户协议》</b>和<b>《隐私政策》</b></span></button>
-        </div></div>
-        <p class="form-err" id="formErr" aria-live="polite"></p>
-        ${cbtn(reg ? '注册' : '登录', '', '')}
-        <button type="button" class="link" data-act="forgot" style="align-self:center">忘记密码？</button>
-      </form>
-      <p class="hint">${reg ? '演示账号已预填' : ''}</p>
-    </div>`;
-  },
-  mount(el){
-    const form = $('#authForm', el), seg = $('#modeSeg', el), err = $('#formErr', el);
-    requestAnimationFrame(() => movePill(seg));
-    const setErr = (msg, fieldId) => { err.textContent = msg; if(fieldId){ const f = $('#' + fieldId, el); f.classList.remove('bad'); void f.offsetWidth; f.classList.add('bad'); } vibrate([10,40,10]); };
-    $$('.field input', el).forEach(i => i.addEventListener('input', () => { i.closest('.field').classList.remove('bad'); err.textContent = ''; }));
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const mode = form.dataset.mode, u = $('#f-u', el).value.trim(), p = $('#f-p', el).value;
-      if(!/^[一-龥A-Za-z0-9_]{3,20}$/.test(u)) return setErr('用户名为 3–20 位中文、字母、数字或下划线', 'fu');
-      if(p.length < 6 || p.length > 32) return setErr('密码为 6–32 位', 'fp');
-      const btn = $('.cbtn', form);
-      if(mode === 'register'){
-        if($('#f-p2', el).value !== p) return setErr('两次输入的密码不一致', 'fp2');
-        if($('#agreeCk', el).getAttribute('aria-checked') !== 'true'){ const a = $('#agree', el); a.classList.remove('wiggle'); void a.offsetWidth; a.classList.add('wiggle'); return setErr('请先阅读并同意用户协议和隐私政策'); }
-        if(S.account && S.account.u === u) return setErr('该用户名已被注册', 'fu');
-        runComplete(btn).then(() => { S.account = {u, h:hash('em' + p)}; S.session = true; S.profile = null; S.plan = null; save(); go('onboard', {}, 'root'); });
-      } else {
-        if(!S.account || S.account.u !== u) return setErr('账号不存在，请先注册', 'fu');
-        if(S.account.h !== hash('em' + p)) return setErr('密码错误', 'fp');
-        runComplete(btn, 500).then(() => { S.session = true; save(); go(S.profile ? 'home' : 'onboard', {}, S.profile ? 'root' : 'root'); });
-      }
-    });
-    return {
-      mode(t){
-        segSelect(seg, t); const reg = t.dataset.mode === 'register';
-        form.dataset.mode = t.dataset.mode; $('#regOnly', el).classList.toggle('open', reg);
-        $('.cb-label', form).textContent = reg ? '注册' : '登录'; err.textContent = '';
-        $('#f-p', el).setAttribute('autocomplete', reg ? 'new-password' : 'current-password');
-      },
-      agree(t){ const ck = $('#agreeCk', el); const on = ck.getAttribute('aria-checked') !== 'true'; ck.setAttribute('aria-checked', String(on)); ck.classList.remove('pop'); void ck.offsetWidth; ck.classList.add('pop'); if(on) err.textContent = ''; },
-      eye(t){ const i = $('#f-p', el); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; t.innerHTML = ic(show ? 'eyeOff' : 'eye'); },
-      forgot(){ toast('演示版暂不支持找回密码，可重新注册'); },
-      poke(t){ cheer($('svg', t)); }
-    };
-  }
-};
-
-/* =========================================================
    SCREEN: onboarding (also used for editing)
    ========================================================= */
 SCREENS.onboard = {
@@ -1977,7 +1907,7 @@ SCREENS.home = {
     }
     return `<div class="scroll">
       <header class="home-top rise">
-        <div><p class="hello">${greet}，</p><h1 class="h-name">${esc(S.account ? S.account.u : '你')}</h1></div>
+        <div><p class="hello">${greet}，</p><h1 class="h-name">${S.account ? esc(S.account.u) : '今天也要好好吃饭'}</h1></div>
         <button class="mascot-btn tap" data-act="poke" aria-label="戳一下小碗">${mascot(76)}</button><span class="bubble" id="bubble"></span>
       </header>
       <section class="body-card rise" style="--i:1">
@@ -2512,7 +2442,16 @@ function recipesFor(ids){
   return RECIPES.map(x => { const hit = x.ing.filter(i => set.has(i.f)).length; return {x, hit, score:hit/x.ing.length + (set.has(x.main) ? .6 : 0)}; })
     .filter(r => set.has(r.x.main) && (r.hit >= 2 || r.x.ing.length === 1 || r.hit/r.x.ing.length >= .5)).sort((a,b) => b.score - a.score).slice(0, 3);
 }
+/* 第一次拍照前说明照片去向；用户点「知道了」时直接打开选图，保证在同一次点击里触发 */
 function photoFlow(kind, onDone){
+  if(S.photoNotice){ photoPick(kind, onDone); return; }
+  openSheet(`<h3>拍照识别说明</h3><p class="sub" style="line-height:1.8">照片会发送给第三方 AI 服务，用来识别食物并估算份量，识别完成后不会保存照片。<br>识别结果是估算值，可以手动修改，请以实际情况为准。</p>
+    <div class="sheet-actions"><button class="btn ghost tap" data-a="no">取消</button><button class="btn leaf tap" data-a="ok">知道了，选照片</button></div>`, (b, close) => {
+    $('[data-a="no"]', b).addEventListener('click', close);
+    $('[data-a="ok"]', b).addEventListener('click', () => { S.photoNotice = true; save(); close(); photoPick(kind, onDone); });
+  });
+}
+function photoPick(kind, onDone){
   pickPhoto(async file => {
     let url = '';
     try{ url = await readDataURL(file); }catch(e){ toast('照片读取失败，请重新选择'); return; }
@@ -3031,7 +2970,6 @@ SCREENS.me = {
       <div class="card rows rise" style="--i:2">
         <button class="row tap" data-act="about"><span class="ri">${ic('info')}</span><span>免责声明与数据说明</span>${ic('chevR','chev-r')}</button>
         <button class="row tap danger" data-act="wipe"><span class="ri">${ic('trash')}</span><span>清除本机数据</span>${ic('chevR','chev-r')}</button>
-        <button class="row tap" data-act="logout"><span class="ri">${ic('out')}</span><span>退出登录</span>${ic('chevR','chev-r')}</button>
       </div>
       ${disclaimer()}
     </div>`;
@@ -3047,8 +2985,7 @@ SCREENS.me = {
         });
       },
       about(){ openSheet(`<h3>免责声明与数据说明</h3><p class="sub" style="line-height:1.8">本应用内容仅供参考，不构成医疗或营养诊疗建议；如有疾病、孕期或特殊情况，请咨询医生或注册营养师。<br><br>「达人推荐」里的内容在正式版中来自小红书公开笔记的概括，并注明作者与原帖；本演示版全部为虚构的示例数据。<br><br>食物营养数据参考《中国食物成分表》的常见数值，上线前需要逐条核对。演示版的所有数据只保存在你这台设备的浏览器里。</p><div class="sheet-actions"><button class="btn primary tap" data-a="ok">知道了</button></div>`, (b, close) => $('[data-a="ok"]', b).addEventListener('click', close)); },
-      wipe(){ confirmSheet({title:'清除本机数据？', text:'账号、身体档案、计划和所有记录都会被删除，而且没法恢复。', ok:'确定清除', danger:true, onOk:() => { S = freshState(); save(); go('login', {}, 'root'); toast('本机数据已清除'); }}); },
-      logout(){ confirmSheet({title:'退出登录？', text:'你的数据会继续保存在这台设备上，下次登录还在。', ok:'退出', onOk:() => { S.session = false; save(); go('login', {}, 'root'); }}); }
+      wipe(){ confirmSheet({title:'清除本机数据？', text:'身体档案、计划和所有记录都会被删除，而且没法恢复。', ok:'确定清除', danger:true, onOk:() => { S = freshState(); save(); go('onboard', {}, 'root'); toast('本机数据已清除'); }}); }
     };
   }
 };
@@ -3059,9 +2996,7 @@ SCREENS.me = {
 function registerCustomFoods(){ Object.values(S.customFoods || {}).forEach(f => { if(f && f.id) FOOD[f.id] = f; }); }
 function boot(){
   registerCustomFoods();
-  if(S.session && S.account && S.profile) go('home', {}, 'root');
-  else if(S.session && S.account) go('onboard', {}, 'root');
-  else go('login', {}, 'root');
+  go(S.profile ? 'home' : 'onboard', {}, 'root');
 }
 const JUMPS = {
   onboard(){ ensureAccount(); save(); setStack([{name:'onboard', params:S.profile ? {edit:true} : {}}], 'root'); },
@@ -3073,7 +3008,7 @@ const JUMPS = {
 };
 $$('[data-jump]').forEach(b => b.addEventListener('click', () => { const f = JUMPS[b.dataset.jump]; if(f) f(); }));
 document.addEventListener('pointerup', e => { const t = e.target.closest && e.target.closest('.jump'); if(t) t.classList.remove('is-pressed'); });
-$('#resetDemo').addEventListener('click', () => { S = freshState(); save(); go('login', {}, 'root'); toast('演示已重置'); });
+$('#resetDemo').addEventListener('click', () => { S = freshState(); save(); go('onboard', {}, 'root'); toast('演示已重置'); });
 
 function clock(){ const d = new Date(); $('#sbTime').textContent = `${d.getHours()}:${pad(d.getMinutes())}`; }
 clock(); setInterval(clock, 30000);
