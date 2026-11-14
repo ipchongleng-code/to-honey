@@ -109,6 +109,25 @@ function extractJson(text) {
   if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (_) {} }
   return null;
 }
+// 把 Node 的「fetch failed」翻译成具体原因
+function networkHint(e) {
+  if (e && e.name === 'AbortError') return `等了 ${UPSTREAM_TIMEOUT_MS / 1000} 秒没有回应（超时）。网络慢，或者开着 VPN/代理时请先关掉再试。`;
+  const c = (e && e.cause) || {};
+  const code = String(c.code || '');
+  const why = `${code} ${c.message || (e && e.message) || ''}`.trim();
+  if (/ENOTFOUND|EAI_AGAIN/.test(code)) return `找不到 ${new URL(BASE_URL).host}（${why}）。请检查电脑能否上网，以及 LLM_BASE_URL 有没有写错。`;
+  if (/CERT|SELF_SIGNED|UNABLE_TO|TLS|SSL/i.test(why)) return `HTTPS 证书校验失败（${why}）。通常是代理软件或杀毒软件在拦截加密连接，请暂时关掉它们再试。`;
+  if (/ECONNRESET|ECONNREFUSED|ETIMEDOUT|UND_ERR|EPIPE|socket/i.test(why)) return `连接被中断或超时（${why}）。如果开着 VPN/代理，请先关掉再试；也可能是网络不稳定。`;
+  return why || '未知网络错误';
+}
+function describeKey(k) {
+  if (!k) return '';
+  if (/^LTAI/i.test(k)) return '⚠ 这看起来是阿里云 AccessKey（LTAI 开头），不是百炼的 API Key（sk- 开头），请到百炼控制台的 API-KEY 页面重新复制。';
+  if (/[\s"'“”‘’]/.test(k)) return '⚠ 密钥里有空格或引号，请检查 api.env：等号后面直接跟密钥，不要加引号。';
+  if (/[^\x21-\x7e]/.test(k)) return '⚠ 密钥里混进了中文或全角字符，请重新复制。';
+  if (!/^sk-/.test(k)) return `⚠ 密钥开头是「${k.slice(0, 3)}」，百炼的密钥一般以 sk- 开头，请确认复制的是 API Key。`;
+  return `密钥：${k.slice(0, 3)}…（共 ${k.length} 位，只显示开头）`;
+}
 function messageText(j) {
   const c = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
   if (Array.isArray(c)) return c.map(p => (p && p.text) || '').join('');
@@ -157,16 +176,23 @@ async function handleVision(req, res) {
         signal: ctl.signal
       });
     } catch (e) {
-      console.error('[识别] 连不上模型平台：', e.name === 'AbortError' ? '超时' : e.message);
-      throw httpError(502, 'upstream_error');
+      console.error('[识别] 连不上模型平台：' + networkHint(e));
+      throw httpError(502, 'network_error');
     } finally { clearTimeout(timer); }
 
     if (!r.ok) {
       const detail = (await r.text().catch(() => '')).slice(0, 300);
-      if (r.status === 401 || r.status === 403) console.error('[识别] 平台拒绝了请求：API 密钥不对，或者没有开通这个模型。', detail);
-      else console.error(`[识别] 平台返回错误 ${r.status}：`, detail);
-      if (r.status === 429) throw httpError(429, 'rate_limited');
-      if (r.status === 400 && /inspection|inappropriate|safety|sensitive/i.test(detail)) throw httpError(422, 'refused');
+      if (r.status === 429) { console.error('[识别] 平台限流（调用太频繁或额度用完）：', detail); throw httpError(429, 'rate_limited'); }
+      if (r.status === 400 && /inspection|inappropriate|safety|sensitive/i.test(detail)) { console.error('[识别] 照片没通过平台的内容审核：', detail); throw httpError(422, 'refused'); }
+      if (r.status === 401 || r.status === 403) {
+        console.error('[识别] 平台拒绝了请求：API 密钥不对，或者没有开通这个模型。请检查 api.env 里的密钥（应以 sk- 开头），改完后关掉窗口重新启动。', detail);
+        throw httpError(502, 'bad_api_key');
+      }
+      if ((r.status === 400 || r.status === 404) && /model/i.test(detail)) {
+        console.error(`[识别] 模型名称「${MODEL}」可能不对：请到平台的模型广场核对，改 api.env 里的 LLM_MODEL 后重新启动。`, detail);
+        throw httpError(502, 'model_error');
+      }
+      console.error(`[识别] 平台返回错误 ${r.status}：`, detail);
       throw httpError(502, 'upstream_error');
     }
 
@@ -225,5 +251,7 @@ server.listen(PORT, () => {
   console.log(`\nEating Manager 已启动：用浏览器打开 http://localhost:${PORT}`);
   console.log(`模型：${MODEL}　每日上限：全站 ${DAILY_LIMIT} 次 / 每人 ${PER_IP_LIMIT} 次`);
   if (!API_KEY) console.log('⚠ 没有读到 API 密钥：拍照识别会失败。请检查 api.env，并用 node --env-file=api.env server.js 启动。');
+  else console.log(describeKey(API_KEY));
+  console.log(`接口地址：${BASE_URL}`);
   console.log('按 Ctrl+C 停止。\n');
 });

@@ -2407,9 +2407,15 @@ async function recognize(kind, file, signal){
     const onAbort = () => ctl.abort(); if(signal) signal.addEventListener('abort', onAbort);
     let r;
     try{ r = await fetch(VISION_ENDPOINT, {method:'POST', body:fd, signal:ctl.signal}); }
-    catch(e){ throw {code: signal && signal.aborted ? 'cancelled' : 'upstream_error'}; }
+    catch(e){ throw {code: signal && signal.aborted ? 'cancelled' : 'service_unavailable'}; }
     finally{ clearTimeout(timer); if(signal) signal.removeEventListener('abort', onAbort); }
-    if(!r.ok){ const code = r.status === 429 ? 'rate_limited' : (r.status === 413 || r.status === 415) ? 'image_rejected' : r.status === 422 ? 'refused' : 'upstream_error'; throw {code}; }
+    if(!r.ok){
+      /* 后端返回的错误码：配置或网络问题（不是照片的问题）统一提示「服务暂时不可用」 */
+      let srv = ''; try{ srv = ((await r.json()) || {}).error || ''; }catch(e){}
+      const code = r.status === 429 ? 'rate_limited' : (r.status === 413 || r.status === 415) ? 'image_rejected' : r.status === 422 ? 'refused'
+        : ['no_api_key','bad_api_key','model_error','network_error'].includes(srv) || r.status === 404 || r.status === 405 || r.status === 503 ? 'service_unavailable' : 'upstream_error';
+      throw {code};
+    }
     let raw; try{ raw = await r.json(); }catch(e){ throw {code:'invalid_json'}; }
     return {mode, data:normalizeVision(raw && raw.data && raw.data.items ? raw.data : raw)};
   }
@@ -2430,6 +2436,7 @@ function demoRecognize(kind, file, signal){
 }
 function visionErrorCopy(code){
   if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)) return '暂时无法识别，可查看示例或手动添加';
+  if(code === 'service_unavailable') return '识别服务暂时不可用，请稍后再试';
   if(code === 'rate_limited') return '识别次数过多，请稍后再试';
   if(code === 'refused') return '无法识别这张照片，请换一张';
   if(code === 'image_rejected') return '不支持该图片格式，请使用 JPG 或 PNG';
