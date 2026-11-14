@@ -19,7 +19,7 @@ const path = require('node:path');
 const API_KEY = (process.env.LLM_API_KEY || process.env.DASHSCOPE_API_KEY || '').trim();
 // 默认阿里云百炼（通义千问）的 OpenAI 兼容地址；换豆包、智谱时改这里和模型名即可
 const BASE_URL = (process.env.LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').trim().replace(/\/+$/, '');
-const MODEL = (process.env.LLM_MODEL || 'qwen-vl-plus').trim();
+const MODEL = (process.env.LLM_MODEL || 'qwen3-vl-plus').trim();
 const PORT = Number(process.env.PORT) || 8787;
 const DAILY_LIMIT = Number(process.env.DAILY_LIMIT) || 300;   // 全站每天最多识别次数
 const PER_IP_LIMIT = Number(process.env.PER_IP_LIMIT) || 40;  // 每个访问者每天最多识别次数
