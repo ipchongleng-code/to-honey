@@ -18,13 +18,11 @@
 1. 安装 Node.js（长期支持版 LTS）：https://nodejs.org
 2. 把 `index.html` 放进 `public` 文件夹
 3. 复制 `api.env.example`，改名为 `api.env`，用记事本打开，把密钥粘贴到 `DASHSCOPE_API_KEY=` 后面
-4. 在这个文件夹里打开终端，运行：
+4. 启动：
+   - **Windows**：双击 `启动（Windows双击）.bat`，浏览器会自动打开
+   - **Mac**：在这个文件夹打开终端，运行 `node --env-file=api.env server.js`，再用浏览器打开 http://localhost:8787
 
-   ```
-   node --env-file=api.env server.js
-   ```
-
-5. 浏览器打开 http://localhost:8787
+   `server.js` 是程序文件，不能直接双击打开；想看内容可以右键 →「打开方式」→「记事本」。
 
 ## 换模型
 
