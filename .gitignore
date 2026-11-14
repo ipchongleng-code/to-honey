@@ -1,0 +1,8 @@
+# 密钥文件，绝对不能上传
+api.env
+*.env
+!api.env.example
+# 用量记录
+usage.csv
+node_modules/
+.DS_Store
