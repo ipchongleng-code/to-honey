@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>问卷后台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F766E'/%3E%3Cpath d='M9 22V14M16 22V9M23 22v-5' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="admin.css?v=1">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form class="login-card" id="loginForm">
+    <h1>问卷后台</h1>
+    <p class="muted" id="loginNote">请输入后台密码</p>
+    <input class="field" type="password" id="pw" placeholder="密码" autocomplete="current-password" required>
+    <button class="btn" type="submit">登录</button>
+    <div class="err" id="loginErr" hidden></div>
+  </form>
+</div>
+
+<div id="main" hidden>
+  <header class="top">
+    <div class="top-inner">
+      <div>
+        <h1 id="surveyTitle">问卷后台</h1>
+        <div class="muted small" id="summary"></div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" href="api/admin/export.csv">导出 CSV</a>
+        <a class="btn ghost" href="api/admin/export.xlsx">导出 Excel</a>
+        <button class="btn text" id="refresh" type="button">刷新</button>
+        <button class="btn text" id="logout" type="button">退出</button>
+      </div>
+    </div>
+    <nav class="tabs top-inner" role="tablist">
+      <button class="tab on" data-tab="stats" role="tab">选项统计</button>
+      <button class="tab" data-tab="list" role="tab">提交列表</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section id="tab-stats"></section>
+    <section id="tab-list" hidden></section>
+  </main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-back" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="modalTitle">提交详情</h2>
+        <div class="muted small" id="modalMeta"></div>
+      </div>
+      <button class="icon-btn" data-close aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn danger" id="delBtn" type="button">删除这份提交</button>
+    </div>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script src="admin.js?v=1"></script>
+</body>
+</html>

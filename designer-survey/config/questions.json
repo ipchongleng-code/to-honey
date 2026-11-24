@@ -1,0 +1,84 @@
+{
+  "id": "designer-survey-v1",
+  "title": "装修设计师工作情况调研",
+  "intro": "本问卷约 10 分钟，用于了解设计师的日常工作，与任何具体项目无关，数据仅用于产品调研，不会外传。",
+  "respondent": {
+    "label": "你的称呼或编号",
+    "placeholder": "选填，如：王工 / 01",
+    "maxLength": 50
+  },
+  "thanks": {
+    "title": "提交成功，感谢你的时间！",
+    "text": "你的回答已收到，后续访谈中我们会进一步交流。现在可以关闭本页面了。"
+  },
+  "sections": [
+    {
+      "id": "A",
+      "title": "你和你的公司",
+      "questions": [
+        { "id": "q1", "title": "从业年限", "type": "single", "required": true,
+          "options": ["不到 1 年", "1–3 年", "3–5 年", "5–10 年", "10 年以上"] },
+        { "id": "q2", "title": "公司类型", "type": "single", "required": true,
+          "options": ["大型连锁装企", "本地中小装企", "设计工作室", "独立设计师", { "label": "其他", "input": true }] },
+        { "id": "q3", "title": "你的职位", "type": "single", "required": true,
+          "options": ["设计助理", "设计师", "主案设计师", "设计总监", "合伙人或老板"] },
+        { "id": "q4", "title": "主要业务", "type": "multi", "required": true,
+          "options": ["纯设计", "半包", "全包", "整装", "软装", "局部翻新", "工装"] },
+        { "id": "q5", "title": "收入主要来自", "type": "single", "required": true,
+          "options": ["底薪 + 签单提成", "纯设计费", "设计费 + 施工提成", "设计费 + 主材返点", { "label": "其他", "input": true }] }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "工作量",
+      "questions": [
+        { "id": "q6", "title": "同时在跟的项目数", "type": "single", "required": true,
+          "options": ["1–3 个", "4–6 个", "7–10 个", "10 个以上"] },
+        { "id": "q7", "title": "客户主要从哪里来", "type": "multi", "required": true, "maxSelect": 3,
+          "options": ["公司派单", "老客户转介绍", "小红书、抖音等内容平台", "家装平台", "楼盘或小区活动", "朋友圈和私域", { "label": "其他", "input": true }] },
+        { "id": "q8", "title": "从首次接触到签约一般多久", "type": "single", "required": true,
+          "options": ["1 周内", "1–4 周", "1–3 个月", "3 个月以上"] },
+        { "id": "q9", "title": "一天大概回复多少条客户消息", "type": "single", "required": true,
+          "options": ["不到 20 条", "20–50 条", "50–100 条", "100 条以上"] }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "工作流与痛点",
+      "questions": [
+        { "id": "q10", "title": "哪些环节最占你的时间", "type": "multi", "required": true, "maxSelect": 3,
+          "options": ["获客与初次沟通", "量房", "需求沟通", "平面方案", "效果图", "预算报价", "施工图", "陪客户选材", "跑工地处理现场问题", "回复客户消息", "公司内部事务"] },
+        { "id": "q11", "title": "哪些环节最容易出错或返工", "type": "multi", "required": true, "maxSelect": 3,
+          "options": ["量房数据有误", "需求理解偏差", "方案反复修改", "效果图与实景有落差", "报价漏项或增项", "施工图与现场不符", "选材型号、色号记错", "设计变更没留记录", "客户和施工方之间传话出错"] },
+        { "id": "q12", "title": "一个方案平均改几轮才定稿", "type": "single", "required": true,
+          "options": ["1–2 轮", "3–4 轮", "5–6 轮", "6 轮以上"] },
+        { "id": "q13", "title": "效果图一般怎么做", "type": "single", "required": true,
+          "options": ["自己做", "公司效果图部门", "外包", "用平台一键渲染", "基本不做"] },
+        { "id": "q14", "title": "报价一般怎么出", "type": "single", "required": true,
+          "options": ["自己用 Excel 模板算", "公司系统自动生成", "预算员负责", "设计软件自动出清单", { "label": "其他", "input": true }] }
+      ]
+    },
+    {
+      "id": "D",
+      "title": "工具与 AI",
+      "questions": [
+        { "id": "q15", "title": "常用软件", "type": "multi", "required": true,
+          "options": ["AutoCAD", "酷家乐", "三维家", "SketchUp", "3ds Max", "D5 或 Enscape", "Photoshop", "Excel", "公司 ERP 或 CRM", "企业微信", { "label": "其他", "input": true }] },
+        { "id": "q16", "title": "用过哪些 AI 工具", "type": "multi", "required": true,
+          "options": ["AI 效果图或风格生成", "对话类 AI（如豆包、DeepSeek、ChatGPT）", "AI 出平面或报价", { "label": "没用过", "exclusive": true }] },
+        { "id": "q17", "title": "如果有一个懂装修的 AI 助理，你最希望它先帮你做什么", "type": "multi", "required": true, "maxSelect": 3,
+          "options": ["回复客户常见问题", "整理客户需求", "出平面布局初稿", "快速出效果图", "做预算报价", "生成施工图", "记录选材和变更", "跟进工地进度并提醒", "写方案说明和宣传文案", "整理案例库"] },
+        { "id": "q18", "title": "公司采购这类软件，一般谁说了算", "type": "single", "required": true,
+          "options": ["老板", "设计总监", "设计师自己买", "不清楚"] }
+      ]
+    },
+    {
+      "id": "E",
+      "title": "开放题（选填）",
+      "questions": [
+        { "id": "q19", "title": "用一句话说说，工作中最让你头疼的一件事是什么？", "type": "textarea", "required": false,
+          "placeholder": "随便写，一句话就好", "maxLength": 1000 }
+      ]
+    }
+  ]
+}

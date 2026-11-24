@@ -1,0 +1,16 @@
+{
+  "name": "designer-survey",
+  "version": "1.0.0",
+  "private": true,
+  "description": "装修设计师工作情况调研：移动端问卷 + 管理后台",
+  "main": "server.js",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server.js",
+    "check": "node --disable-warning=ExperimentalWarning scripts/check-config.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0"
+  }
+}
