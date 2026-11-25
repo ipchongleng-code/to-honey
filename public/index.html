@@ -2413,7 +2413,7 @@ async function recognize(kind, file, signal){
       /* 后端返回的错误码：配置或网络问题（不是照片的问题）统一提示「服务暂时不可用」 */
       let srv = ''; try{ srv = ((await r.json()) || {}).error || ''; }catch(e){}
       const code = r.status === 429 ? 'rate_limited' : (r.status === 413 || r.status === 415) ? 'image_rejected' : r.status === 422 ? 'refused'
-        : ['no_api_key','bad_api_key','model_error','network_error'].includes(srv) || r.status === 404 || r.status === 405 || r.status === 503 ? 'service_unavailable' : 'upstream_error';
+        : ['no_api_key','bad_api_key','no_balance','model_error','network_error'].includes(srv) || r.status === 404 || r.status === 405 || r.status === 503 ? 'service_unavailable' : 'upstream_error';
       throw {code};
     }
     let raw; try{ raw = await r.json(); }catch(e){ throw {code:'invalid_json'}; }

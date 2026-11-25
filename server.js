@@ -9,6 +9,7 @@
  * - 网页文件放在 public/ 文件夹，只有这个文件夹里的文件会被公开访问。
  * - 每次识别会在 usage.csv 里记一行（时间、耗时、token 用量），不保存照片。
  * - 不需要安装任何第三方依赖，Node.js 20.6 或更新版本即可运行。
+ * - 默认使用 DeepSeek 的 deepseek-flash 模型（DeepSeek 里能看图片的模型）。
  */
 'use strict';
 const http = require('node:http');
@@ -16,10 +17,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 /* ---------- 配置（都可以在 api.env 里改） ---------- */
-const API_KEY = (process.env.LLM_API_KEY || process.env.DASHSCOPE_API_KEY || '').trim();
-// 默认阿里云百炼（通义千问）的 OpenAI 兼容地址；换豆包、智谱时改这里和模型名即可
-const BASE_URL = (process.env.LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').trim().replace(/\/+$/, '');
-const MODEL = (process.env.LLM_MODEL || 'qwen3-vl-plus').trim();
+const API_KEY = (process.env.DEEPSEEK_API_KEY || process.env.LLM_API_KEY || '').trim();
+// 默认 DeepSeek 的 OpenAI 兼容地址；以后换其他平台，在 api.env 里改 LLM_BASE_URL 和 LLM_MODEL 即可
+const BASE_URL = (process.env.LLM_BASE_URL || 'https://api.deepseek.com').trim().replace(/\/+$/, '');
+const MODEL = (process.env.LLM_MODEL || 'deepseek-flash').trim();
+const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS) || 4000;
+// 之前用通义千问 / 火山方舟时留下的密钥名，启动时用来提醒换成 DeepSeek
+const OLD_KEYS = ['DASHSCOPE_API_KEY', 'ARK_API_KEY', 'VOLC_API_KEY', 'VOLCENGINE_API_KEY', 'DOUBAO_API_KEY'].filter(k => process.env[k]);
 const PORT = Number(process.env.PORT) || 8787;
 const DAILY_LIMIT = Number(process.env.DAILY_LIMIT) || 300;   // 全站每天最多识别次数
 const PER_IP_LIMIT = Number(process.env.PER_IP_LIMIT) || 40;  // 每个访问者每天最多识别次数
@@ -29,7 +33,7 @@ const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || '').trim(); // 网页和�
 const MAX_UPLOAD = 8 * 1024 * 1024;
 const MAX_IMAGE = 6 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 50000;
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const USAGE_LOG = path.join(__dirname, 'usage.csv');
 
@@ -122,10 +126,10 @@ function networkHint(e) {
 }
 function describeKey(k) {
   if (!k) return '';
-  if (/^LTAI/i.test(k)) return '⚠ 这看起来是阿里云 AccessKey（LTAI 开头），不是百炼的 API Key（sk- 开头），请到百炼控制台的 API-KEY 页面重新复制。';
+  if (/^LTAI/i.test(k)) return '⚠ 这看起来是阿里云 AccessKey（LTAI 开头），不是 DeepSeek 的 API Key，请到 DeepSeek 开放平台的 API keys 页面重新复制。';
   if (/[\s"'“”‘’]/.test(k)) return '⚠ 密钥里有空格或引号，请检查 api.env：等号后面直接跟密钥，不要加引号。';
   if (/[^\x21-\x7e]/.test(k)) return '⚠ 密钥里混进了中文或全角字符，请重新复制。';
-  if (!/^sk-/.test(k)) return `⚠ 密钥开头是「${k.slice(0, 3)}」，百炼的密钥一般以 sk- 开头，请确认复制的是 API Key。`;
+  if (!/^sk-/.test(k)) return `⚠ 密钥开头是「${k.slice(0, 3)}」，DeepSeek 的密钥一般以 sk- 开头，请确认复制的是 API Key。`;
   return `密钥：${k.slice(0, 3)}…（共 ${k.length} 位，只显示开头）`;
 }
 function messageText(j) {
@@ -167,7 +171,7 @@ async function handleVision(req, res) {
         body: JSON.stringify({
           model: MODEL,
           temperature: 0.2,
-          max_tokens: 1500,
+          max_tokens: MAX_TOKENS,
           messages: [{role: 'user', content: [
             {type: 'image_url', image_url: {url: dataUrl}},
             {type: 'text', text: visionPrompt(kind, cleanLibrary(form.get('library')))}
@@ -185,11 +189,19 @@ async function handleVision(req, res) {
       if (r.status === 429) { console.error('[识别] 平台限流（调用太频繁或额度用完）：', detail); throw httpError(429, 'rate_limited'); }
       if (r.status === 400 && /inspection|inappropriate|safety|sensitive/i.test(detail)) { console.error('[识别] 照片没通过平台的内容审核：', detail); throw httpError(422, 'refused'); }
       if (r.status === 401 || r.status === 403) {
-        console.error('[识别] 平台拒绝了请求：API 密钥不对，或者没有开通这个模型。请检查 api.env 里的密钥（应以 sk- 开头），改完后关掉窗口重新启动。', detail);
+        console.error('[识别] 平台拒绝了请求：API 密钥不对。请检查 api.env 里的 DEEPSEEK_API_KEY（应以 sk- 开头），改完后关掉窗口重新启动。', detail);
         throw httpError(502, 'bad_api_key');
       }
-      if ((r.status === 400 || r.status === 404) && /model/i.test(detail)) {
-        console.error(`[识别] 模型名称「${MODEL}」可能不对：请到平台的模型广场核对，改 api.env 里的 LLM_MODEL 后重新启动。`, detail);
+      if (r.status === 402) {
+        console.error('[识别] DeepSeek 账户余额不足：请到 https://platform.deepseek.com 充值后再试。', detail);
+        throw httpError(502, 'no_balance');
+      }
+      if ((r.status === 400 || r.status === 422) && /image|vision|multimodal/i.test(detail)) {
+        console.error(`[识别] 模型「${MODEL}」不支持看图片：DeepSeek 里只有 deepseek-flash 能识别图片，请把 api.env 里的 LLM_MODEL 改成 deepseek-flash（或删掉这一行）后重新启动。`, detail);
+        throw httpError(502, 'model_error');
+      }
+      if ((r.status === 400 || r.status === 404 || r.status === 422) && /model/i.test(detail)) {
+        console.error(`[识别] 模型名称「${MODEL}」可能不对：DeepSeek 看图用 deepseek-flash，请改 api.env 里的 LLM_MODEL（或删掉这一行）后重新启动。`, detail);
         throw httpError(502, 'model_error');
       }
       console.error(`[识别] 平台返回错误 ${r.status}：`, detail);
@@ -247,11 +259,19 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' || req.method === 'HEAD') { serveStatic(req, res, pathname); return; }
   res.writeHead(405); res.end();
 });
+server.on('error', e => {
+  if (e.code === 'EADDRINUSE') console.error(`\n⚠ 端口 ${PORT} 已被占用：很可能已经开着一个 Eating Manager 黑色窗口。\n请先关掉旧的窗口再启动；或者直接用浏览器打开 http://localhost:${PORT}\n`);
+  else console.error('\n⚠ 启动失败：', e.message, '\n');
+  process.exit(1);
+});
 server.listen(PORT, () => {
   console.log(`\nEating Manager 已启动：用浏览器打开 http://localhost:${PORT}`);
   console.log(`模型：${MODEL}　每日上限：全站 ${DAILY_LIMIT} 次 / 每人 ${PER_IP_LIMIT} 次`);
-  if (!API_KEY) console.log('⚠ 没有读到 API 密钥：拍照识别会失败。请检查 api.env，并用 node --env-file=api.env server.js 启动。');
+  if (!API_KEY && OLD_KEYS.length) console.log(`⚠ api.env 里还是旧的密钥（${OLD_KEYS.join('、')}）。现在改用 DeepSeek：请新增一行 DEEPSEEK_API_KEY=你的 DeepSeek 密钥，并删掉旧的那一行。`);
+  else if (!API_KEY) console.log('⚠ 没有读到 API 密钥：拍照识别会失败。请在 api.env 里填写 DEEPSEEK_API_KEY=你的密钥，并用 node --env-file=api.env server.js 启动。');
   else console.log(describeKey(API_KEY));
+  if (/deepseek\.com/i.test(BASE_URL) && !/^deepseek-/i.test(MODEL)) console.log(`⚠ 模型名「${MODEL}」不是 DeepSeek 的模型：请把 api.env 里的 LLM_MODEL 改成 deepseek-flash，或直接删掉这一行。`);
+  if (!/deepseek\.com/i.test(BASE_URL)) console.log('⚠ 接口地址不是 DeepSeek：api.env 里可能还留着旧的 LLM_BASE_URL（通义千问 / 火山方舟），要用 DeepSeek 请删掉这一行。');
   console.log(`接口地址：${BASE_URL}`);
   console.log('按 Ctrl+C 停止。\n');
 });
